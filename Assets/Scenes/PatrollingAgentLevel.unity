@@ -994,7 +994,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enemy: {fileID: 8428241121297845228, guid: a65534a3e7f0b9544806e44da47abd1d, type: 3}
-  patrol: {fileID: 2048547950}
+  path: {fileID: 2048547950}
   patrolUpdate: 0.6
   speed: 2
   state: 

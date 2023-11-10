@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class generatePatrol : MonoBehaviour
+public class generatePath : MonoBehaviour
 {
     //Script assumes the object is a square in the (x, z) plane
     [HideInInspector] public float length;

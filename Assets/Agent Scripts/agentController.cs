@@ -9,7 +9,7 @@ public class agentController : MonoBehaviour
     Vector3 enemyVec;
 
     //patrol variables
-    public generatePatrol patrol;
+    public generatePath path;
     public float patrolUpdate;
     public float speed;
     float currentTime;
@@ -64,7 +64,7 @@ public class agentController : MonoBehaviour
     void Start()
     {
         state = "patrol";
-        direction = patrol.getDirection(transform.position.x, transform.position.z, false);
+        direction = path.getDirection(transform.position.x, transform.position.z, false);
         nextDirection = direction;
         currentTime = 0f;
 
@@ -74,7 +74,7 @@ public class agentController : MonoBehaviour
         health = 100f;
 
         destination = new Vector3(0f, 0f, 0f);
-        distFromCover = patrol.len + GetComponent<CapsuleCollider>().radius;
+        distFromCover = path.len + GetComponent<CapsuleCollider>().radius;
         defenseActions = gameObject.GetComponentsInChildren<TextMeshProUGUI>();
         defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 0f);
         defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 0f);
@@ -89,7 +89,7 @@ public class agentController : MonoBehaviour
         currentTime += Time.deltaTime;
         if (currentTime >= patrolUpdate) 
         {
-            nextDirection = patrol.getDirection(transform.position.x, transform.position.z, false);
+            nextDirection = path.getDirection(transform.position.x, transform.position.z, false);
             currentTime = 0f;
         }
         direction += (nextDirection - direction) * Time.deltaTime; //along with slowly updating direction vector with time
@@ -97,15 +97,15 @@ public class agentController : MonoBehaviour
         transform.rotation = Quaternion.LookRotation(direction);
 
         //if very far from object run back
-        if (Vector3.Distance(patrol.transform.position, transform.position) > 2 * patrol.length)
+        if (Vector3.Distance(path.transform.position, transform.position) > 2 * path.length)
         {
             transform.position += 2 * speed * Time.deltaTime * direction;
-            patrol.far = true;
+            path.far = true;
         }
         else
         {
             transform.position += speed * Time.deltaTime * direction;
-            patrol.far = false;
+            path.far = false;
         }
 
         //check for enemies
@@ -131,7 +131,7 @@ public class agentController : MonoBehaviour
             if (dTime == 0f)
             {
                 //find cover
-                enemyAngle = Mathf.Atan2(enemy.position.z - patrol.transform.position.z, enemy.position.x - patrol.transform.position.x);
+                enemyAngle = Mathf.Atan2(enemy.position.z - path.transform.position.z, enemy.position.x - path.transform.position.x);
                 destination.x = -distFromCover * Mathf.Cos(enemyAngle);
                 destination.z = -distFromCover * Mathf.Sin(enemyAngle);
                 //4.5f is the raidus of the circle that approximates the line (0.25x)^4 + (0.25z)^4 = 1 (SWITCH TO THIS CIRCLE?)
@@ -139,8 +139,8 @@ public class agentController : MonoBehaviour
                 destination.z = (destination.z * 5f) / Mathf.Sqrt(Mathf.Pow(destination.x, 2) + Mathf.Pow(destination.z, 2));
 
                 //get revolve direction around payload
-                destAngle = (Mathf.Atan2(destination.z - patrol.transform.position.z, destination.x - patrol.transform.position.x) * Mathf.Rad2Deg + 360) % 360;
-                playerAngle = (Mathf.Atan2(transform.position.z - patrol.transform.position.z, transform.position.x - patrol.transform.position.x) * Mathf.Rad2Deg + 360) % 360;
+                destAngle = (Mathf.Atan2(destination.z - path.transform.position.z, destination.x - path.transform.position.x) * Mathf.Rad2Deg + 360) % 360;
+                playerAngle = (Mathf.Atan2(transform.position.z - path.transform.position.z, transform.position.x - path.transform.position.x) * Mathf.Rad2Deg + 360) % 360;
                 if (playerAngle > destAngle)
                     revolveDir = true; //clockwise
                 else
@@ -186,7 +186,7 @@ public class agentController : MonoBehaviour
                 currentTime += Time.deltaTime;
                 if (currentTime >= findCoverUpdate)
                 {
-                    nextDirection = patrol.getDirection(transform.position.x, transform.position.z, revolveDir);
+                    nextDirection = path.getDirection(transform.position.x, transform.position.z, revolveDir);
                     currentTime = 0f;
                 }
                 direction += (nextDirection - direction) * Time.deltaTime;
@@ -322,7 +322,7 @@ public class agentController : MonoBehaviour
             enemyVec = transform.position - enemy.position;
             enemyVec.y = 0f;
             enemyVec = enemyVec.normalized;
-            enemyVecPerp = new Vector3(enemyVec.z, 0f, enemyVec.x);
+            enemyVecPerp = new Vector3(-enemyVec.z, 0f, enemyVec.x);
             amp = 0f;
             switchTime = t + transTime + Random.Range(switchRange[0], switchRange[1]);
         }
@@ -334,7 +334,7 @@ public class agentController : MonoBehaviour
                 enemyVec = transform.position - enemy.position;
                 enemyVec.y = 0f;
                 enemyVec = enemyVec.normalized;
-                enemyVecPerp = new Vector3(enemyVec.z, 0f, enemyVec.x);
+                enemyVecPerp = new Vector3(-enemyVec.z, 0f, enemyVec.x);
             }
 
             //reset vars
