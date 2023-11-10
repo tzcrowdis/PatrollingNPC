@@ -38,19 +38,19 @@ public class agentTest : MonoBehaviour
         {
             case 0:
                 enemyInst = Instantiate(enemy, new Vector3(10f, 1f, 0f), Quaternion.identity);
-                agent.enemy = enemy.transform;
+                agent.enemy = enemyInst.transform;
                 break;
             case 1:
                 enemyInst = Instantiate(enemy, new Vector3(0f, 1f, 10f), Quaternion.identity);
-                agent.enemy = enemy.transform;
+                agent.enemy = enemyInst.transform;
                 break;
             case 2:
                 enemyInst = Instantiate(enemy, new Vector3(-10f, 1f, 0f), Quaternion.identity);
-                agent.enemy = enemy.transform;
+                agent.enemy = enemyInst.transform;
                 break;
             case 3:
                 enemyInst = Instantiate(enemy, new Vector3(0f, 1f, -10f), Quaternion.identity);
-                agent.enemy = enemy.transform;
+                agent.enemy = enemyInst.transform;
                 break;
         }
     }

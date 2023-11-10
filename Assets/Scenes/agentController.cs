@@ -26,14 +26,18 @@ public class agentController : MonoBehaviour
     bool shoot = false;
     float dTime = 0f;
     int shootDir;
-    float shootTime = 3f;
-    float shootStart = 0f;
+    float shootTime = 5f;
+    float shootStart = 100f;
     RaycastHit objHit;
     float crouchSpeed;
-    float findCoverUpdate = 0.2f;
+    float findCoverUpdate = 0.3f;
     float payloadAngle;
     float destAngle;
     bool revolveDir;
+    Quaternion startRot;
+    Quaternion endRot;
+    float rotTime = 0f;
+    bool rotDone = false;
 
     //flee variables [tweak visually]
     Vector3 enemyVecPerp;
@@ -70,8 +74,7 @@ public class agentController : MonoBehaviour
         health = 100f;
 
         destination = new Vector3(0f, 0f, 0f);
-        //distFromCover = Mathf.Sqrt(2 * Mathf.Pow(patrol.len, 2)) + GetComponent<CapsuleCollider>().radius;
-        distFromCover = 2f + 0.5f;
+        distFromCover = patrol.len + GetComponent<CapsuleCollider>().radius;
         defenseActions = gameObject.GetComponentsInChildren<TextMeshProUGUI>();
         defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 0f);
         defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 0f);
@@ -128,44 +131,66 @@ public class agentController : MonoBehaviour
             if (dTime == 0f)
             {
                 //find cover
-                enemyAngle = Mathf.Atan2(enemy.position.x - patrol.transform.position.x, enemy.position.z - patrol.transform.position.z);
+                enemyAngle = Mathf.Atan2(enemy.position.z - patrol.transform.position.z, enemy.position.x - patrol.transform.position.x);
                 destination.x = -distFromCover * Mathf.Cos(enemyAngle);
                 destination.z = -distFromCover * Mathf.Sin(enemyAngle);
-
                 //4.5f is the raidus of the circle that approximates the line (0.25x)^4 + (0.25z)^4 = 1 (SWITCH TO THIS CIRCLE?)
-                //assumes payload is at origin
-                destination.x = (destination.x * 5f) / Mathf.Sqrt(Mathf.Pow(destination.x, 2) + Mathf.Pow(destination.z, 2)); 
+                destination.x = (destination.x * 5f) / Mathf.Sqrt(Mathf.Pow(destination.x, 2) + Mathf.Pow(destination.z, 2)); //assumes payload is at origin
                 destination.z = (destination.z * 5f) / Mathf.Sqrt(Mathf.Pow(destination.x, 2) + Mathf.Pow(destination.z, 2));
                 currentTime = 0f;
 
                 //get revolve direction around payload
-                destAngle = Mathf.Atan2(destination.x - transform.position.x, destination.z - transform.position.z);
-                payloadAngle = Mathf.Atan2(patrol.transform.position.x - transform.position.x, patrol.transform.position.z - transform.position.z);
+                destAngle = Mathf.Atan2(destination.z - transform.position.z, destination.x - transform.position.x);
+                payloadAngle = Mathf.Atan2(patrol.transform.position.z - transform.position.z, patrol.transform.position.x - transform.position.x);
                 if (payloadAngle > destAngle)
                     revolveDir = false; //counterclockwise
                 else
                     revolveDir = true; //clockwise
+                revolveDir = false; //OVERRIDE
+
+                rotTime = 0f;
+                rotDone = false;
             }
+
             dTime += Time.deltaTime;
 
-            //move behind cover
-            currentTime += Time.deltaTime;
-            if (currentTime >= findCoverUpdate)
-            {
-                nextDirection = patrol.getDirection(transform.position.x, transform.position.z, revolveDir);
-                currentTime = 0f;
-            }
-            direction += (nextDirection - direction) * Time.deltaTime;
-            transform.position += 2 * speed * Time.deltaTime * direction;
-            transform.rotation = Quaternion.LookRotation(direction);
-
-            //once there crouch and start next action
-            //Debug.Log(Vector3.Distance(transform.position, destination));
             if (Vector3.Distance(transform.position, destination) <= 1.5f)
             {
-                defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 1f); //enter mock crouch [change speed?]
-                shoot = true;
-                dTime = 0f;
+                //behind cover crouch, turn to enemy, and start next action
+                if (rotTime == 0f)
+                {
+                    startRot = transform.rotation;
+                    endRot = Quaternion.LookRotation(enemy.position - transform.position);
+                }
+                else if (rotTime >= 1f) //standard lerp time of 1s
+                {
+                    rotDone = true;
+                }
+                
+                if (!rotDone)
+                {
+                    transform.rotation = Quaternion.Lerp(startRot, endRot, rotTime);
+                    rotTime += 2 * Time.deltaTime;
+                }
+                else
+                {
+                    defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 1f); //enter mock crouch
+                    shoot = true;
+                    dTime = 0f;
+                }
+            }
+            else
+            {
+                //move behind cover
+                currentTime += Time.deltaTime;
+                if (currentTime >= findCoverUpdate)
+                {
+                    nextDirection = patrol.getDirection(transform.position.x, transform.position.z, revolveDir);
+                    currentTime = 0f;
+                }
+                direction += (nextDirection - direction) * Time.deltaTime;
+                transform.position += fleeSpeed * Time.deltaTime * direction;
+                transform.rotation = Quaternion.LookRotation(direction);
             }
         }
         else //pop out (up, left, or right) and shoot enemy
@@ -174,64 +199,115 @@ public class agentController : MonoBehaviour
             {
                 shootDir = Random.Range(0, 3);
                 dTime += Time.deltaTime;
+                shootStart = 100f;
                 Debug.Log(shootDir);
             }
             else if (dTime >= shootStart + shootTime)
             {
                 shoot = false;
                 dTime = 0f;
+                defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 0f);
+                defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 0f);
             }
             else
             {
-                switch (shootDir) //may be problems in the substates
+                switch (shootDir) //problems in the substates
                 {
                     case 0: //up
                         defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 0f);
                         defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 1f);
-                        transform.rotation = Quaternion.LookRotation(enemy.position - transform.position);
                         if (dTime == 0f)
                             shootStart = dTime;
                         break;
+
                     case 1: //left
-                        if (Physics.Raycast(transform.position, enemy.position, out objHit, visionRadius) & objHit.collider.tag == "Enemy" & shootStart == 0f) //start shooting
+                        if (Physics.Raycast(transform.position, enemy.position - transform.position, out objHit))
                         {
-                            defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 1f);
-                            shootStart = dTime;
-                        }
-                        else if (Physics.Raycast(transform.position, enemy.position, out objHit, visionRadius) & objHit.collider.tag == "Enemy" & shootStart == 0f) //keep shooting
-                        {
-                            transform.rotation = Quaternion.LookRotation(enemy.position - transform.position);
-                        }
-                        else if (Physics.Raycast(transform.position, enemy.position, out objHit, visionRadius) & objHit.collider.tag != "Enemy" & shootStart > 0f) //end shooting
-                        {
-                            dTime += shootTime;
+                            if (shootStart == 100f)
+                            {
+                                if (objHit.collider.gameObject.tag == "Enemy") //start shooting
+                                {
+                                    defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 0f);
+                                    defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 1f);
+                                    shootStart = dTime;
+                                }
+                                else //find target left
+                                {
+                                    defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 1f);
+                                    defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 0f);
+                                    transform.position += crouchSpeed * -transform.right * Time.deltaTime;
+                                    transform.rotation = Quaternion.LookRotation(enemy.position - transform.position);
+                                }
+                            }
+                            else if (dTime > shootStart) 
+                            {
+                                if (objHit.collider.gameObject.tag == "Enemy") //keep shooting
+                                {
+                                    defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 0f);
+                                    defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 1f);
+                                }
+                                else //find target left
+                                {
+                                    defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 1f);
+                                    defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 0f);
+                                    transform.position += crouchSpeed * -transform.right * Time.deltaTime;
+                                    transform.rotation = Quaternion.LookRotation(enemy.position - transform.position);
+                                }
+                            }
                         }
                         else //find target left
                         {
+                            defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 1f);
+                            defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 0f);
                             transform.position += crouchSpeed * -transform.right * Time.deltaTime;
-                        }
-                        break;
-                    case 2: //right
-                        if (Physics.Raycast(transform.position, enemy.position, out objHit, visionRadius) & objHit.collider.tag == "Enemy" & shootStart == 0f)
-                        {
-                            defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 1f);
-                            shootStart = dTime;
-                        }
-                        else if (Physics.Raycast(transform.position, enemy.position, out objHit, visionRadius) & objHit.collider.tag == "Enemy" & shootStart == 0f)
-                        {
                             transform.rotation = Quaternion.LookRotation(enemy.position - transform.position);
                         }
-                        else if (Physics.Raycast(transform.position, enemy.position, out objHit, visionRadius) & objHit.collider.tag != "Enemy" & shootStart > 0f)
+                        break;
+
+                    case 2: //right
+                        if (Physics.Raycast(transform.position, enemy.position - transform.position, out objHit))
                         {
-                            dTime += shootTime;
+                            if (shootStart == 100f)
+                            {
+                                if (objHit.collider.gameObject.tag == "Enemy") //start shooting
+                                {
+                                    defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 0f);
+                                    defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 1f);
+                                    shootStart = dTime;
+                                }
+                                else //find target right
+                                {
+                                    defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 1f);
+                                    defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 0f);
+                                    transform.position += crouchSpeed * transform.right * Time.deltaTime;
+                                    transform.rotation = Quaternion.LookRotation(enemy.position - transform.position);
+                                }
+                            }
+                            else if (dTime > shootStart)
+                            {
+                                if (objHit.collider.gameObject.tag == "Enemy") //keep shooting
+                                {
+                                    defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 0f);
+                                    defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 1f);
+                                }
+                                else //find target right
+                                {
+                                    defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 1f);
+                                    defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 0f);
+                                    transform.position += crouchSpeed * transform.right * Time.deltaTime;
+                                    transform.rotation = Quaternion.LookRotation(enemy.position - transform.position);
+                                }
+                            }
                         }
-                        else
+                        else //find target right
                         {
+                            defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 1f);
+                            defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 0f);
                             transform.position += crouchSpeed * transform.right * Time.deltaTime;
+                            transform.rotation = Quaternion.LookRotation(enemy.position - transform.position);
                         }
                         break;
                 }
-
                 dTime += Time.deltaTime;
             }
         }
@@ -245,7 +321,7 @@ public class agentController : MonoBehaviour
             enemyVec = transform.position - enemy.position;
             enemyVec.y = 0f;
             enemyVec = enemyVec.normalized;
-            enemyVecPerp = new Vector3(-enemyVec.z, 0f, enemyVec.x);
+            enemyVecPerp = new Vector3(enemyVec.z, 0f, enemyVec.x);
             amp = 0f;
             switchTime = t + transTime + Random.Range(switchRange[0], switchRange[1]);
         }
@@ -257,7 +333,7 @@ public class agentController : MonoBehaviour
                 enemyVec = transform.position - enemy.position;
                 enemyVec.y = 0f;
                 enemyVec = enemyVec.normalized;
-                enemyVecPerp = new Vector3(-enemyVec.z, 0f, enemyVec.x);
+                enemyVecPerp = new Vector3(enemyVec.z, 0f, enemyVec.x);
             }
 
             //reset vars

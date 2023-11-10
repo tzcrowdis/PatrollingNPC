@@ -4,6 +4,9 @@ using UnityEngine;
 
 public class enemyTestBehavior : MonoBehaviour
 {
+    //test lerp based on start position
+    
+    /*
     float speed = 1f;
     float amp = 10f;
     float freq = 1f;
@@ -24,4 +27,5 @@ public class enemyTestBehavior : MonoBehaviour
         transform.position += speed * Time.deltaTime * direction;
         t += Time.deltaTime;
     }
+    */
 }
