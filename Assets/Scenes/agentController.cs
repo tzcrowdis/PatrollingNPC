@@ -26,12 +26,12 @@ public class agentController : MonoBehaviour
     bool shoot = false;
     float dTime = 0f;
     int shootDir;
-    float shootTime = 5f;
+    float shootTime = 3f;
     float shootStart = 100f;
     RaycastHit objHit;
     float crouchSpeed;
     float findCoverUpdate = 0.3f;
-    float payloadAngle;
+    float playerAngle;
     float destAngle;
     bool revolveDir;
     Quaternion startRot;
@@ -137,22 +137,23 @@ public class agentController : MonoBehaviour
                 //4.5f is the raidus of the circle that approximates the line (0.25x)^4 + (0.25z)^4 = 1 (SWITCH TO THIS CIRCLE?)
                 destination.x = (destination.x * 5f) / Mathf.Sqrt(Mathf.Pow(destination.x, 2) + Mathf.Pow(destination.z, 2)); //assumes payload is at origin
                 destination.z = (destination.z * 5f) / Mathf.Sqrt(Mathf.Pow(destination.x, 2) + Mathf.Pow(destination.z, 2));
-                currentTime = 0f;
 
                 //get revolve direction around payload
-                destAngle = Mathf.Atan2(destination.z - transform.position.z, destination.x - transform.position.x);
-                payloadAngle = Mathf.Atan2(patrol.transform.position.z - transform.position.z, patrol.transform.position.x - transform.position.x);
-                if (payloadAngle > destAngle)
-                    revolveDir = false; //counterclockwise
-                else
+                destAngle = (Mathf.Atan2(destination.z - patrol.transform.position.z, destination.x - patrol.transform.position.x) * Mathf.Rad2Deg + 360) % 360;
+                playerAngle = (Mathf.Atan2(transform.position.z - patrol.transform.position.z, transform.position.x - patrol.transform.position.x) * Mathf.Rad2Deg + 360) % 360;
+                if (playerAngle > destAngle)
                     revolveDir = true; //clockwise
-                revolveDir = false; //OVERRIDE
+                else
+                    revolveDir = false; //counterclockwise
+                
 
+                currentTime = 0f;
                 rotTime = 0f;
                 rotDone = false;
+                dTime += Time.deltaTime;
             }
 
-            dTime += Time.deltaTime;
+            
 
             if (Vector3.Distance(transform.position, destination) <= 1.5f)
             {
@@ -216,7 +217,7 @@ public class agentController : MonoBehaviour
                     case 0: //up
                         defenseActions[0].color = new Color(defenseActions[0].color.r, defenseActions[0].color.g, defenseActions[0].color.b, 0f);
                         defenseActions[1].color = new Color(defenseActions[1].color.r, defenseActions[1].color.g, defenseActions[1].color.b, 1f);
-                        if (dTime == 0f)
+                        if (shootStart == 100f)
                             shootStart = dTime;
                         break;
 
