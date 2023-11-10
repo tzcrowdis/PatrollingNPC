@@ -7,7 +7,7 @@ public class generatePatrol : MonoBehaviour
     //Script assumes the object is a square in the (x, z) plane
     [HideInInspector] public float length;
     [HideInInspector] public bool far = false;
-    float len;
+    [HideInInspector] public float len;
 
     Vector3 direction = new Vector3(0f, 0f, 0f);
 
@@ -18,7 +18,7 @@ public class generatePatrol : MonoBehaviour
     }
 
     //returns the direction vector given the position
-    public Vector3 getDirection(float x, float z)
+    public Vector3 getDirection(float x, float z, bool clockwise)
     {
         //find the quadrant to determine counterclockwise
         if (x >= length)
@@ -54,6 +54,8 @@ public class generatePatrol : MonoBehaviour
                 direction = new Vector3(1f, 0f, -1f);
             }
         }
+        if (clockwise)
+            direction *= -1;
         direction = direction.normalized;
 
         //desired path is on the line (0.25x)^4 + (0.25z)^4 = 1
