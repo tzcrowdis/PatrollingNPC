@@ -14,6 +14,8 @@ Where $\vec{d}$ is the direction vector of our agent and $\vec{v}$ is the vector
 The script agentTest.cs attached to the agent showcases the 3 main states. Recommend starting with no states set to true then using the number keys to select a state at runtime, default is Patrol.
 
 The enemyTestBehavior.cs Script in Test Scripts currently does nothing. In the future it could be set to lerping between two points to simulate movement.
+## Demo Video
+https://github.com/tzcrowdis/PatrollingNPC/assets/100492586/fedf80ac-9682-4ff6-91bd-61b65700c577
 ## Future Directions
 I think it could be interesting to generate nodes according to $(\frac{1}{4}x)^4 + (\frac{1}{4}z)^4 = 1$, varying the fraction between 0 and 1, then implementing this with A* as the primary method of navigation. Could provide a more general way of finding paths.
 ## Misc
